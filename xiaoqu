@@ -1,0 +1,73 @@
+import requests
+from bs4 import BeautifulSoup
+import random
+import xlwt
+import xlrd
+from xlutils.copy import copy
+ua_list = [
+        "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/22.0.1207.1 Safari/537.1",
+        "Mozilla/5.0 (X11; CrOS i686 2268.111.0) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.57 Safari/536.11",
+        "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.6 (KHTML, like Gecko) Chrome/20.0.1092.0 Safari/536.6",
+        "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.6 (KHTML, like Gecko) Chrome/20.0.1090.0 Safari/536.6",
+        "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/19.77.34.5 Safari/537.1",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/536.5 (KHTML, like Gecko) Chrome/19.0.1084.9 Safari/536.5",
+        "Mozilla/5.0 (Windows NT 6.0) AppleWebKit/536.5 (KHTML, like Gecko) Chrome/19.0.1084.36 Safari/536.5",
+        "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1063.0 Safari/536.3",
+        "Mozilla/5.0 (Windows NT 5.1) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1063.0 Safari/536.3",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_0) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1063.0 Safari/536.3",
+        "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1062.0 Safari/536.3",
+        "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1062.0 Safari/536.3",
+        "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.1 Safari/536.3",
+        "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.1 Safari/536.3",
+        "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.1 Safari/536.3",
+        "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.0 Safari/536.3",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24",
+        "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24",
+        'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36'
+        ]
+
+headers = {'User-agent': random.choice(ua_list)}
+urls = ['bojuedadi0512', 'guanhuyihao0512', 'hefengyasong', 'guojishequhr0512', 'jiangnanlixiang', 'jinsesenlin0512', 'jiuyangxiangjun',
+            'qingfenghuayuan20512', 'senlinbandao0512', 'wenhuajiayuansd0512', 'zhongyangshequsd', 'tiandihuacheng0512', 'xiangxieshuian0512', 'weilaichengzd']
+for u in urls:
+        url = 'http://' + u + '.fang.com/chushou/'
+        #url = 'http://http://guangdahuayuan2.fang.com/chushou/'
+        response = requests.get(url, headers=headers, timeout=4)
+        soup = BeautifulSoup(response.text, 'lxml')
+        xiaoqu = soup.find('a', class_='esfdetailName blueWord').get_text()
+        #打开excel
+        rdbook = xlrd.open_workbook(xiaoqu + '.xls')
+        wtbook = copy(rdbook)
+        #添加新sheet
+        worksheet = wtbook.add_sheet('201803', cell_overwrite_ok=True)
+        #找到最后一页的页码
+        last_page = soup.find_all('a', id='PageControl1_hlk_last')
+        if len(last_page) != 0:
+            last_url = last_page[0].attrs['href']
+            response_last = requests.get(last_url, headers=headers)
+            soup_last = BeautifulSoup(response_last.text, 'lxml')
+            total_page = soup_last.find('a', class_='pageNow').get_text()
+        else:
+            total_page = soup.find('a', class_='pageNow').get_text()
+        #开始提取
+        count = 0
+        for page in range(1, int(total_page)+1):
+                pageurl = 'http://' + u + '.fang.com/chushou/list/-h330-i3' + str(page) + '/'
+                res = requests.get(pageurl, headers=headers, timeout=4)
+                s = BeautifulSoup(res.text, 'lxml')
+                links = s.find_all('div', class_='fangList')
+                for i in links:
+                    link = i.find('a')['href']
+                    each = BeautifulSoup(str(i), 'lxml')
+                    title = each.find('p', class_='fangTitle').get_text().replace(',', '').strip()
+                    mianji = each.find('li').get_text()[:-2]
+                    zongjia = each.find('span', class_='num').get_text()
+                    danjia = each.find('li', class_='update').get_text()[:-4]
+                    worksheet.write(count, 0, title, xlwt.easyxf('font: height 240, name SimSun'))
+                    worksheet.write(count, 1, int(zongjia), xlwt.easyxf('font: height 240, name SimSun'))
+                    worksheet.write(count, 2, int(mianji), xlwt.easyxf('font: height 240, name SimSun'))
+                    worksheet.write(count, 3, int(danjia), xlwt.easyxf('font: height 240, name SimSun'))
+                    worksheet.write(count, 4, link, xlwt.easyxf('font: height 240, name SimSun'))
+                    count += 1
+                    print(count, title)
+        wtbook.save(xiaoqu + '.xls')
